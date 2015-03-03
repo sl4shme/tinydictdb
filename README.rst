@@ -115,6 +115,7 @@ Get informations about the db:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     print(db)
+
     TinyDictDb instance stored in /tmp/plop, containing 4 entries in yaml format.
 
 
