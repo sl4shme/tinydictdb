@@ -1,5 +1,6 @@
 from json import load, dump
 from os import path
+from copy import deepcopy
 try:
     from yaml import safe_load as yamlLoad, dump as yamlDump
 except ImportError:
@@ -85,12 +86,84 @@ class TinyDictDb:
         result = self.__readDb()
         for searchField in toSearch.keys():
             if type(toSearch[searchField]) == str:
-                result = [item for item in result if toSearch[searchField]
-                          in item[searchField]]
+                result = [item for item in result if
+                          toSearch[searchField] in item.get(searchField, "")]
+            if type(toSearch[searchField]) in [int, float]:
+                result = [item for item in result if
+                          toSearch[searchField] == item.get(searchField)]
             if type(toSearch[searchField]) == list:
-                result = [item for item in result if set(
-                          toSearch[searchField]).issubset(item[searchField])]
+                result = [item for item in result if
+                          set(toSearch[searchField]).issubset(
+                              item.get(searchField, []))]
             if callable(toSearch[searchField]):
                 result = [item for item in result if
-                          toSearch[searchField](item[searchField])]
+                          toSearch[searchField](item.get(searchField))]
         return(result)
+
+
+def printer(providedEntries, fields=None, copy=False):
+    # We could want to re-use those entries without mofifying them
+    if copy:
+        entries = deepcopy(providedEntries)
+    else:
+        entries = providedEntries
+
+    # Generate or get the fields list and create the header entry
+    header = {}
+    if fields is None:
+        fields = list(set([i for sublist in entries for i in sublist.keys()]))
+        fields.sort()
+        for field in fields:
+            header[field] = field
+    else:
+        if type(fields) != list:
+            raise TypeError("Expected a list containing str or tuples of str")
+        for i, field in enumerate(fields):
+            if type(field) == str:
+                header[field] = field
+            elif type(field) == tuple:
+                header[field[0]] = field[1]
+                fields[i] = field[0]
+            else:
+                raise TypeError("Expected a list containing str or"
+                                " tuples of str")
+    if len(fields) == 0:
+        print("[]")
+        return 1
+
+    entries.insert(0, header)
+
+    # Str everything + None everything
+    for entry in entries:
+        for field in fields:
+            entry[field] = str(entry.get(field, None))
+
+    # Get size of columns
+    columns = []
+    for field in fields:
+        lenght = [len(i[field])for i in entries]
+        lenght.sort()
+        lenght.reverse()
+        columns.append((field, lenght[0]))
+
+    # Generating an horizontal line of the right size
+    delimLine = "+-"  # First '| '
+    for (f, s) in columns:
+        for i in range(0, s):
+            delimLine += '-'
+        delimLine += '-+-'
+    delimLine = delimLine[:-1]
+
+    # do the printing
+    print(delimLine)
+    for lineNumber, entry in enumerate(entries):
+        line = "| "
+        for (field, size) in columns:
+            line += entry[field]
+            for i in range(0, (size - len(entry[field]))):
+                line += " "
+            line += " | "
+        print(line.strip())
+        if lineNumber == 0:
+            print(delimLine)
+    print(delimLine)
