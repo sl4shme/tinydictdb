@@ -6,6 +6,9 @@ try:
 except ImportError:
     pass
 
+# TODO : Add unsafe which does not re read the file
+# TODO : Append to file if write
+
 
 class TinyDictDb:
     def __init__(self, dbPath, encoding='json', indent=None):
@@ -101,69 +104,87 @@ class TinyDictDb:
         return(result)
 
 
-def printer(providedEntries, fields=None, copy=False):
-    # We could want to re-use those entries without mofifying them
-    if copy:
-        entries = deepcopy(providedEntries)
-    else:
-        entries = providedEntries
+class prettyPrinter:
+    def __init__(self, providedEntries, fields=None, header="full"):
+        self.genHeader = header
+        self.entries = deepcopy(providedEntries)
+        self.fields = self.generateFieldsAndHeader(deepcopy(fields))
+        self.entries = self.cleanup(self.entries, self.fields)
+        self.generateColumns()
+        self.lines = self.genLines()
 
-    # Generate or get the fields list and create the header entry
-    header = {}
-    if fields is None:
-        fields = list(set([i for sublist in entries for i in sublist.keys()]))
-        fields.sort()
-        for field in fields:
-            header[field] = field
-    else:
-        if type(fields) != list:
-            raise TypeError("Expected a list containing str or tuples of str")
-        for i, field in enumerate(fields):
-            if type(field) == str:
+    def generateFieldsAndHeader(self, fields):
+        header = {}
+        if fields is None:
+            fields = list(set([i for sublist in self.entries
+                               for i in sublist.keys()]))
+            fields.sort()
+            for field in fields:
                 header[field] = field
-            elif type(field) == tuple:
-                header[field[0]] = field[1]
-                fields[i] = field[0]
-            else:
-                raise TypeError("Expected a list containing str or"
-                                " tuples of str")
-    if len(fields) == 0:
-        print("[]")
-        return 1
+        else:
+            if type(fields) != list:
+                raise TypeError("Expected a list of: str or tuples of str")
+            for i, field in enumerate(fields):
+                if type(field) == str:
+                    header[field] = field
+                elif type(field) == tuple:
+                    header[field[0]] = field[1]
+                    fields[i] = field[0]
+                else:
+                    raise TypeError("Expected a list of: str or tuples of str")
+        if self.genHeader in ['full', 'head']:
+            self.entries.insert(0, header)
+        return fields
 
-    entries.insert(0, header)
+    def cleanup(self, entries, fields):
+        for entry in entries:
+            for field in fields:
+                entry[field] = str(entry.get(field, None))
+        return entries
 
-    # Str everything + None everything
-    for entry in entries:
-        for field in fields:
-            entry[field] = str(entry.get(field, None))
+    def generateColumns(self):
+        self.columns = []
+        for field in self.fields:
+            lenght = [len(i[field])for i in self.entries]
+            lenght.sort()
+            lenght.reverse()
+            self.columns.append((field, lenght[0]))
 
-    # Get size of columns
-    columns = []
-    for field in fields:
-        lenght = [len(i[field])for i in entries]
-        lenght.sort()
-        lenght.reverse()
-        columns.append((field, lenght[0]))
+    def genLines(self):
+        lines = []
+        delimLine = "+-"
+        for (field, size) in self.columns:
+            for i in range(0, size):
+                delimLine += '-'
+            delimLine += '-+-'
+        delimLine = delimLine[:-1]
 
-    # Generating an horizontal line of the right size
-    delimLine = "+-"  # First '| '
-    for (f, s) in columns:
-        for i in range(0, s):
-            delimLine += '-'
-        delimLine += '-+-'
-    delimLine = delimLine[:-1]
+        if self.genHeader in ['full', 'lines']:
+            lines.append(delimLine)
+        for lineNumber, entry in enumerate(self.entries):
+            line = "| "
+            for (field, size) in self.columns:
+                line += entry[field]
+                for i in range(0, (size - len(entry[field]))):
+                    line += " "
+                line += " | "
+            lines.append(line.strip())
+            if (lineNumber == 0) and (self.genHeader == 'full'):
+                lines.append(delimLine)
+        if self.genHeader in ['full', 'lines']:
+            lines.append(delimLine)
+        if self.fields == []:
+            lines = []
+        return lines
 
-    # do the printing
-    print(delimLine)
-    for lineNumber, entry in enumerate(entries):
-        line = "| "
-        for (field, size) in columns:
-            line += entry[field]
-            for i in range(0, (size - len(entry[field]))):
-                line += " "
-            line += " | "
-        print(line.strip())
-        if lineNumber == 0:
-            print(delimLine)
-    print(delimLine)
+    def __str__(self):
+        for line in self.lines:
+            print(line)
+        return ""
+
+    def getOneString(self):
+        ret = ""
+        for line in self.lines:
+            ret += line
+            ret += "\n"
+        return ret
