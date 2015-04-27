@@ -1,5 +1,5 @@
-from json import load, dump
-from os import path
+from json import load, dump, dumps
+from os import path, SEEK_END
 from copy import deepcopy
 try:
     from yaml import safe_load as yamlLoad, dump as yamlDump
@@ -8,13 +8,16 @@ except ImportError:
 
 # TODO : Add unsafe which does not re read the file
 # TODO : Append to file if write
+# TODO : Add readMode ; full memory, half memory, file
+# TODO : Add writeMode ; full memory, append, file
+# TODO : StrictSearch ?
 
 
 class TinyDictDb:
-    def __init__(self, dbPath, encoding='json', indent=None):
-        self.__indent = indent
-        if encoding in ['json', 'yaml']:
-            self.__encoding = encoding
+    def __init__(self, **kwargs):
+        enc = kwargs.get('encoding', 'json')
+        if enc in ['json', 'yaml']:
+            self.__encoding = enc
         else:
             raise ValueError("Encoding must be json or yaml.")
         if self.__encoding == 'yaml':
@@ -25,11 +28,24 @@ class TinyDictDb:
                                   "seems to be not installed.")
         else:
             self.load, self.dump = load, dump
-        self.path = path.expanduser(dbPath)
-        self.path = path.normpath(self.path)
-        if not path.isfile(self.path) or path.getsize(self.path) == 0:
-            self.__writeDb([])
-        self.__readDb()
+
+        # manage what should get here by default
+        self.path = kwargs.get('dbPath')
+        self.rMode = kwargs.get('rMode')
+        self.wMode = kwargs.get('wMode')
+
+        if self.path is not None:
+            self.path = path.expanduser(self.path)
+            self.path = path.normpath(self.path)
+            if not path.isfile(self.path) or path.getsize(self.path) == 0:
+                with open(self.path, 'w') as f:
+                    f.write('[]')
+
+        if self.rMode == 'mem':
+            self.__datas = []
+        else:
+            self.__datas = None
+            self.__readDb()
 
     def __str__(self):
         return("TinyDictDb instance stored in {}, containing {} "
@@ -38,70 +54,87 @@ class TinyDictDb:
                                               self.__encoding))
 
     def __readDb(self):
-        with open(self.path) as f:
-            try:
-                datas = self.load(f)
-            except:
-                raise ValueError("Datas contained in {} are not "
-                                 "valid {}.".format(self.path,
-                                                    self.__encoding))
-        return datas
+        if (self.rMode == 'file') or (self.__datas is None):
+            with open(self.path) as f:
+                try:
+                    self.__datas = self.load(f)
+                except:
+                    raise ValueError("Datas contained in {} are not "
+                                     "valid {}.".format(self.path,
+                                                        self.__encoding))
 
-    def __writeDb(self, newDatas):
-        with open(self.path, 'w') as f:
-            self.dump(newDatas, f, indent=self.__indent)
+    def __writeDb(self):
+        if self.wMode in ['file', 'append']:
+            with open(self.path, 'w') as f:
+                self.dump(self.__datas, f)
 
     def addEntries(self, entries):
         if type(entries) == dict:
             entries = [entries]
-        newDatas = self.__readDb()
+        self.__readDb()
         for entry in entries:
-            newDatas.append(entry)
-        self.__writeDb(newDatas)
+            self.__datas.append(entry)
+        self.__writeDb()
+
+    def appendEntriesToFile(self, entries):
+        t = dumps(entries)
+        t = t[1:]
+        with open(self.path, 'rb+') as f:
+            f.seek(-1, SEEK_END)
+            f.truncate()
+            f.seek(-1, SEEK_END)
+            lastChar = f.read()
+        if lastChar != '[':
+            t = ', '+t
+        with open(self.path, 'a') as f:
+            f.write(t)
 
     def deleteEntries(self, entries):
         if type(entries) == dict:
             entries = [entries]
-        newDatas = self.__readDb()
+        self.__readDb()
         count = 0
         for entry in entries:
             try:
-                newDatas.remove(entry)
+                self.__datas.remove(entry)
                 count += 1
             except ValueError:
-                raise ValueError("This entry was not present in the db: "
-                                 "{}".format(entry))
-        self.__writeDb(newDatas)
+                pass
+        self.__writeDb()
         return count
 
     def editEntries(self, entries, fct):
-        newDatas = self.__readDb()
+        self.__readDb()
         for entry in entries:
-            newDatas.remove(entry)
-            newDatas.append(fct(entry))
-        self.__writeDb(newDatas)
+            self.__datas.remove(entry)
+            self.__datas.append(fct(entry))
+        self.__writeDb()
 
     def isPresent(self, entry):
         datas = self.__readDb()
         return datas.count(entry)
 
     def findEntries(self, **toSearch):
-        result = self.__readDb()
+        self.__readDb()
+        result = self.__datas
         for searchField in toSearch.keys():
             if type(toSearch[searchField]) == str:
                 result = [item for item in result if
                           toSearch[searchField] in item.get(searchField, "")]
-            if type(toSearch[searchField]) in [int, float]:
+            elif type(toSearch[searchField]) in [int, float, bool, list]:
                 result = [item for item in result if
                           toSearch[searchField] == item.get(searchField)]
-            if type(toSearch[searchField]) == list:
+            elif type(toSearch[searchField]) == set:
                 result = [item for item in result if
-                          set(toSearch[searchField]).issubset(
+                          toSearch[searchField].issubset(
                               item.get(searchField, []))]
-            if callable(toSearch[searchField]):
+            elif callable(toSearch[searchField]):
                 result = [item for item in result if
                           toSearch[searchField](item.get(searchField))]
-        return(result)
+        if self.rMode in ['fileMem', 'mem']:
+            return(deepcopy(result))
+        else:
+            return(result)
 
 
 class prettyPrinter:
