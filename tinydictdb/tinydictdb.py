@@ -38,8 +38,8 @@ class TinyDictDb:
             self.path = path.expanduser(self.path)
             self.path = path.normpath(self.path)
             if not path.isfile(self.path) or path.getsize(self.path) == 0:
-                with open(self.path, 'w') as f:
-                    f.write('[]')
+                self.__datas = []
+                self.__writeDb()
 
         if self.rMode == 'mem':
             self.__datas = []
@@ -74,7 +74,10 @@ class TinyDictDb:
         self.__readDb()
         for entry in entries:
             self.__datas.append(entry)
-        self.__writeDb()
+        if self.wMode == 'append':
+            self.appendEntriesToFile(entries)
+        else:
+            self.__writeDb()
 
     def appendEntriesToFile(self, entries):
         t = dumps(entries)
@@ -84,7 +87,8 @@ class TinyDictDb:
             f.truncate()
             f.seek(-1, SEEK_END)
             lastChar = f.read()
-        if lastChar != '[':
+            print(lastChar)
+        if lastChar != b'[':
             t = ', '+t
         with open(self.path, 'a') as f:
             f.write(t)
