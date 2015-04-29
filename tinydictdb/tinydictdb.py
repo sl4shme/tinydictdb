@@ -17,10 +17,10 @@ class TinyDictDb:
     def __init__(self, **kwargs):
         enc = kwargs.get('encoding', 'json')
         if enc in ['json', 'yaml']:
-            self.__encoding = enc
+            self.encoding = enc
         else:
             raise ValueError("Encoding must be json or yaml.")
-        if self.__encoding == 'yaml':
+        if self.encoding == 'yaml':
             try:
                 self.load, self.dump = yamlLoad, yamlDump
             except NameError:
@@ -38,8 +38,8 @@ class TinyDictDb:
             self.path = path.expanduser(self.path)
             self.path = path.normpath(self.path)
             if not path.isfile(self.path) or path.getsize(self.path) == 0:
-                self.__datas = []
-                self.__writeDb()
+                with open(self.path, 'w') as f:
+                    f.write('[]')
 
         if self.rMode == 'mem':
             self.__datas = []
@@ -51,7 +51,7 @@ class TinyDictDb:
         return("TinyDictDb instance stored in {}, containing {} "
                "entries in {} format.".format(self.path,
                                               len(self.findEntries()),
-                                              self.__encoding))
+                                              self.encoding))
 
     def __readDb(self):
         if (self.rMode == 'file') or (self.__datas is None):
@@ -61,7 +61,7 @@ class TinyDictDb:
                 except:
                     raise ValueError("Datas contained in {} are not "
                                      "valid {}.".format(self.path,
-                                                        self.__encoding))
+                                                        self.encoding))
 
     def __writeDb(self):
         if self.wMode in ['file', 'append']:
@@ -72,26 +72,31 @@ class TinyDictDb:
         if type(entries) == dict:
             entries = [entries]
         self.__readDb()
+        classicWrite = False
+        if len(self.__datas) <= 1:
+            classicWrite = True
         for entry in entries:
             self.__datas.append(entry)
-        if self.wMode == 'append':
-            self.appendEntriesToFile(entries)
-        else:
+        if (self.wMode != 'append') or classicWrite is True:
             self.__writeDb()
+        else:
+            self.appendEntriesToFile(entries)
 
     def appendEntriesToFile(self, entries):
-        t = dumps(entries)
-        t = t[1:]
-        with open(self.path, 'rb+') as f:
-            f.seek(-1, SEEK_END)
-            f.truncate()
-            f.seek(-1, SEEK_END)
-            lastChar = f.read()
-            print(lastChar)
-        if lastChar != b'[':
-            t = ', '+t
-        with open(self.path, 'a') as f:
-            f.write(t)
+        if self.encoding == 'yaml':
+            with open(self.path, 'a') as f:
+                self.dump(entries, f)
+        else:
+            t = dumps(entries)
+            t = t[1:]
+            with open(self.path, 'rb+') as f:
+                f.seek(-1, SEEK_END)
+                f.truncate()
+                f.seek(-1, SEEK_END)
+                lastChar = f.read()
+                if lastChar != b"[":
+                    t = ", " + t
+                f.write(bytes(t, 'UTF-8'))
 
     def deleteEntries(self, entries):
         if type(entries) == dict:
@@ -115,8 +120,8 @@ class TinyDictDb:
         self.__writeDb()
 
     def isPresent(self, entry):
-        datas = self.__readDb()
-        return datas.count(entry)
+        self.__readDb()
+        return self.__datas.count(entry)
 
     def findEntries(self, **toSearch):
         self.__readDb()

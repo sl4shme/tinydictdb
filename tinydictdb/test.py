@@ -29,17 +29,18 @@ def createTypes():
     types = []
     for r in ['mem', 'fileMem', 'file']:
         for w in ['mem', 'append', 'file']:
-            types.append((r, w))
+            for e in ['json', 'yaml']:
+                types.append((r, w, e))
     return types
 
 
-def doTest(i, rm, wm, en):
-    entry = {"id": i, "rMode": rm, 'wMode': wm}
+def doTest(i, rm, wm, enc, en):
+    entry = {"id": i, "rMode": rm, 'wMode': wm, 'encoding': enc}
     path = '/tmp/dbdbdb.json'
 
     print("creating")
     t1 = time.time()
-    o = tddb.TinyDictDb(dbPath=path, rMode=rm, wMode=wm)
+    o = tddb.TinyDictDb(dbPath=path, rMode=rm, wMode=wm, encoding=enc)
     t2 = time.time()
     ttot = t2 - t1
     entry['creation'] = ttot
@@ -107,8 +108,6 @@ def tester(num):
     result = []
     for itoo, it in enumerate(types):
         thisLoad = deepcopy(load)
-        print("starting iteration "+str(itoo))
-        result.append(doTest(itoo, it[0], it[1], thisLoad))
-    print(str(tddb.prettyPrinter(result)))
-
-tester(1000)
+        print("starting iteration "+str(it))
+        result.append(doTest(itoo, it[0], it[1], it[2], thisLoad))
+    return result
