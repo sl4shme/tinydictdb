@@ -155,12 +155,13 @@ class TinyDictDb:
             return(result)
 
 
-class prettyPrinter:
+class PrettyPrinter:
     def __init__(self, providedEntries, **kwargs):
-        # No Style / csv / without border / separate header and border
-        # choose separator
-        # truncate
-        self.genHeader = kwargs.get('header', 'full')
+        # border = True / False
+        # header = True / False
+        # separator="|"
+        # truncate = None, number (voire meme :) dans le tuple )
+        self.header = kwargs.get('header', True)
         self.entries = deepcopy(providedEntries)
         self.sortField = kwargs.get('sort', None)
         if self.sortField is not None:
@@ -190,7 +191,7 @@ class prettyPrinter:
                     fields[i] = field[0]
                 else:
                     raise TypeError("Expected a list of: str or tuples of str")
-        if self.genHeader in ['full', 'head']:
+        if self.header in ['full', 'head']:
             self.entries.insert(0, header)
         return fields
 
@@ -221,7 +222,7 @@ class prettyPrinter:
             delimLine += '-+-'
         delimLine = delimLine[:-1]
 
-        if self.genHeader in ['full', 'lines']:
+        if self.header in ['full', 'lines']:
             lines.append(delimLine)
         for lineNumber, entry in enumerate(self.entries):
             line = "| "
@@ -231,9 +232,9 @@ class prettyPrinter:
                     line += " "
                 line += " | "
             lines.append(line.strip())
-            if (lineNumber == 0) and (self.genHeader == 'full'):
+            if (lineNumber == 0) and (self.header == 'full'):
                 lines.append(delimLine)
-        if self.genHeader in ['full', 'lines']:
+        if self.header in ['full', 'lines']:
             lines.append(delimLine)
         if self.fields == []:
             lines = []
