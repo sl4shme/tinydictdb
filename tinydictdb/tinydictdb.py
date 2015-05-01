@@ -157,18 +157,20 @@ class TinyDictDb:
 
 class PrettyPrinter:
     def __init__(self, providedEntries, **kwargs):
-        # border = True / False
-        # header = True / False
-        # separator="|"
-        # truncate = None, number (voire meme :) dans le tuple )
+        self.border = kwargs.get('border', True)
         self.header = kwargs.get('header', True)
+        self.vDelim = kwargs.get('delim', '|')
+        self.hDelim = kwargs.get('hDelim', '-')
+        self.xDelim = kwargs.get('xDelim', '+')
+        self.padding = kwargs.get('padding', True)
+        self.truncate = kwargs.get('truncate')
         self.entries = deepcopy(providedEntries)
         self.sortField = kwargs.get('sort', None)
         if self.sortField is not None:
             self.entries = self.sort(self.entries, self.sortField)
         self.fields = deepcopy(kwargs.get('fields', None))
         self.fields = self.generateFieldsAndHeader(self.fields)
-        self.entries = self.cleanup(self.entries, self.fields)
+        self.entries = self.cleanup(self.entries, self.fields, self.truncate)
         self.generateColumns()
         self.lines = self.genLines()
 
@@ -191,7 +193,7 @@ class PrettyPrinter:
                     fields[i] = field[0]
                 else:
                     raise TypeError("Expected a list of: str or tuples of str")
-        if self.header in ['full', 'head']:
+        if self.header is True:
             self.entries.insert(0, header)
         return fields
 
@@ -199,10 +201,16 @@ class PrettyPrinter:
         newlist = sorted(entries, key=itemgetter(key))
         return newlist
 
-    def cleanup(self, entries, fields):
+    def cleanup(self, entries, fields, truncate):
         for entry in entries:
             for field in fields:
                 entry[field] = str(entry.get(field, None))
+                if isinstance(truncate, int) and truncate > 0:
+                    entry[field] = entry[field][:truncate]
+                elif isinstance(truncate, dict):
+                    limit = truncate.get(field)
+                    if limit is not None:
+                        entry[field] = entry[field][:limit]
         return entries
 
     def generateColumns(self):
@@ -215,35 +223,45 @@ class PrettyPrinter:
 
     def genLines(self):
         lines = []
-        delimLine = "+-"
-        for (field, size) in self.columns:
-            for i in range(0, size):
-                delimLine += '-'
-            delimLine += '-+-'
-        delimLine = delimLine[:-1]
-
-        if self.header in ['full', 'lines']:
+        if self.padding is False:
+            for e in self.entries:
+                line = ""
+                for (field, s) in self.columns:
+                    line += e[field] + self.vDelim
+                lines.append(line[:-1])
+            return lines
+        if self.border is True:
+            delimLine = self.xDelim + self.hDelim
+            for (field, size) in self.columns:
+                for i in range(0, size):
+                    delimLine += self.hDelim
+                delimLine += self.hDelim + self.xDelim + self.hDelim
+            delimLine = delimLine[:-1]
             lines.append(delimLine)
         for lineNumber, entry in enumerate(self.entries):
-            line = "| "
+            if self.border is True:
+                line = self.vDelim + " "
+            else:
+                line = ""
             for (field, size) in self.columns:
                 line += entry[field]
                 for i in range(0, (size - len(entry[field]))):
                     line += " "
-                line += " | "
+                line += " " + self.vDelim + " "
+            if self.border is False:
+                line = line[:-3]
             lines.append(line.strip())
-            if (lineNumber == 0) and (self.header == 'full'):
+            if (self.border is True and lineNumber == 0 and
+                    self.header is True):
                 lines.append(delimLine)
-        if self.header in ['full', 'lines']:
+        if self.border is True:
             lines.append(delimLine)
         if self.fields == []:
             lines = []
         return lines
 
     def __str__(self):
-        for line in self.lines:
-            print(line)
-        return ""
+        return self.getOneString()
 
     def getOneString(self):
         ret = ""
