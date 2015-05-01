@@ -4,6 +4,9 @@ import os
 from copy import deepcopy
 import random
 import string
+import sqlite3
+import pickle
+import json
 
 
 def createLoad(num):
@@ -13,8 +16,7 @@ def createLoad(num):
                "name": randStr(32),
                "type": "text",
                "tags": [randStr(10), randStr(5)],
-               "encrypt": "false",
-               "c_date": "2015-01-12 16:03:44"}
+               "date": "2015-01-12 16:03:44"}
         data.append(obj)
     return data
 
@@ -30,17 +32,18 @@ def createTypes():
     for r in ['mem', 'fileMem', 'file']:
         for w in ['mem', 'append', 'file']:
             for e in ['json', 'yaml']:
-                types.append((r, w, e))
+                for d in [True, False]:
+                    types.append((r, w, e, d))
     return types
 
 
-def doTest(i, rm, wm, enc, en):
-    entry = {"id": i, "rMode": rm, 'wMode': wm, 'encoding': enc}
+def doTest(i, rm, wm, enc, d, en):
+    entry = {"id": i, "rMode": rm, 'wMode': wm, 'encoding': enc, 'dCopy': d}
     path = '/tmp/dbdbdb.json'
 
     print("creating")
     t1 = time.time()
-    o = tddb.TinyDictDb(dbPath=path, rMode=rm, wMode=wm, encoding=enc)
+    o = tddb.TinyDictDb(dbPath=path, rMode=rm, wMode=wm, encoding=enc, dCopy=d)
     t2 = time.time()
     ttot = t2 - t1
     entry['creation'] = ttot
@@ -99,6 +102,10 @@ def doTest(i, rm, wm, enc, en):
     except:
         pass
 
+    for k in entry.keys():
+        if type(entry[k]) == float:
+            entry[k] = '{0:f}'.format(entry[k])
+
     return entry
 
 
@@ -109,5 +116,67 @@ def tester(num):
     for itoo, it in enumerate(types):
         thisLoad = deepcopy(load)
         print("starting iteration "+str(it))
-        result.append(doTest(itoo, it[0], it[1], it[2], thisLoad))
+        result.append(doTest(itoo, it[0], it[1], it[2], it[3], thisLoad))
     return result
+
+
+def testSqlite(lo):
+    conn = sqlite3.connect('/tmp/dbdbdb.json')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE entries (id integer, name text, type text, tags blob, date text)''')
+    for i in lo:
+        t = (i["id"], i["name"], i["type"], pickle.dumps(i['tags']), i["date"])
+        c.execute("INSERT INTO entries VALUES (?, ?, ?, ?, ?)", t)
+        conn.commit()
+    conn.close()
+
+
+def testJson(lo):
+    # d = tddb.TinyDictDb(dbPath='/tmp/dbdbdb1.json', rMode='fileMem', wMode="append")
+    # for i in lo:
+        # d.addEntries(i)
+    # d = tddb.TinyDictDb(rMode='mem', wMode="mem")
+    # d.addEntries(lo)
+    with open('/tmp/dbdbdb1.json', 'w') as f:
+        json.dump(lo, f)
+
+
+def testTddb(lo):
+    d = tddb.TinyDictDb(dbPath='/tmp/dbdbdb2.json', rMode='fileMem', wMode="append")
+    for i in lo:
+        d.addEntries(i)
+    # d.addEntries(lo)
+
+
+def vs(num):
+    loa = createLoad(num)
+    try:
+        os.remove('/tmp/dbdbdb.json')
+    except:
+        pass
+
+    t1 = time.time()
+    testSqlite(loa)
+    t2 = time.time()
+    ttot = t2 - t1
+    print(ttot)
+
+    try:
+        os.remove('/tmp/dbdbdb1.json')
+    except:
+        pass
+    t1 = time.time()
+    testJson(loa)
+    t2 = time.time()
+    ttot = t2 - t1
+    print(ttot)
+
+    try:
+        os.remove('/tmp/dbdbdb2.json')
+    except:
+        pass
+    t1 = time.time()
+    testTddb(loa)
+    t2 = time.time()
+    ttot = t2 - t1
+    print(ttot)

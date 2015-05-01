@@ -1,16 +1,11 @@
 from json import load, dump, dumps
 from os import path, SEEK_END
 from copy import deepcopy
+from operator import itemgetter
 try:
     from yaml import safe_load as yamlLoad, dump as yamlDump
 except ImportError:
     pass
-
-# TODO : Add unsafe which does not re read the file
-# TODO : Append to file if write
-# TODO : Add readMode ; full memory, half memory, file
-# TODO : Add writeMode ; full memory, append, file
-# TODO : StrictSearch ?
 
 
 class TinyDictDb:
@@ -22,19 +17,24 @@ class TinyDictDb:
             raise ValueError("Encoding must be json or yaml.")
         if self.encoding == 'yaml':
             try:
-                self.load, self.dump = yamlLoad, yamlDump
+                self.__load, self.__dump = yamlLoad, yamlDump
             except NameError:
                 raise ImportError("You selected yaml, but PyYaml does not "
-                                  "seems to be not installed.")
+                                  "seems to be installed.")
         else:
-            self.load, self.dump = load, dump
+            self.__load, self.__dump = load, dump
 
-        # manage what should get here by default
-        self.path = kwargs.get('dbPath')
-        self.rMode = kwargs.get('rMode')
-        self.wMode = kwargs.get('wMode')
-
-        if self.path is not None:
+        self.dCopy = kwargs.get('dCopy', True)
+        self.path = kwargs.get('path', None)
+        if self.path is None:
+            self.rMode = kwargs.get('rMode', 'mem')
+            self.wMode = kwargs.get('wMode', 'mem')
+            if self.rMode != 'mem' or self.wMode != 'mem':
+                raise ValueError("Path is needed if rMode or wMode"
+                                 "differ from 'mem'.")
+        else:
+            self.rMode = kwargs.get('rMode', 'file')
+            self.wMode = kwargs.get('wMode', 'file')
             self.path = path.expanduser(self.path)
             self.path = path.normpath(self.path)
             if not path.isfile(self.path) or path.getsize(self.path) == 0:
@@ -57,16 +57,23 @@ class TinyDictDb:
         if (self.rMode == 'file') or (self.__datas is None):
             with open(self.path) as f:
                 try:
-                    self.__datas = self.load(f)
+                    self.__datas = self.__load(f)
                 except:
                     raise ValueError("Datas contained in {} are not "
                                      "valid {}.".format(self.path,
                                                         self.encoding))
 
-    def __writeDb(self):
-        if self.wMode in ['file', 'append']:
+    def __writeDb(self, bypass=False):
+        if self.wMode in ['file', 'append'] or bypass is True:
             with open(self.path, 'w') as f:
-                self.dump(self.__datas, f)
+                self.__dump(self.__datas, f)
+
+    def writeDb(self):
+        if self.path is not None:
+            self.__writeDb(True)
+        else:
+            raise ValueError("You need to set the path attribute of this DB"
+                             " before writing it.")
 
     def addEntries(self, entries):
         if type(entries) == dict:
@@ -80,12 +87,12 @@ class TinyDictDb:
         if (self.wMode != 'append') or classicWrite is True:
             self.__writeDb()
         else:
-            self.appendEntriesToFile(entries)
+            self.__appendEntriesToFile(entries)
 
-    def appendEntriesToFile(self, entries):
+    def __appendEntriesToFile(self, entries):
         if self.encoding == 'yaml':
             with open(self.path, 'a') as f:
-                self.dump(entries, f)
+                self.__dump(entries, f)
         else:
             t = dumps(entries)
             t = t[1:]
@@ -119,38 +126,47 @@ class TinyDictDb:
             self.__datas.append(fct(entry))
         self.__writeDb()
 
-    def isPresent(self, entry):
+    def count(self, entry):
         self.__readDb()
         return self.__datas.count(entry)
 
-    def findEntries(self, **toSearch):
+    def findEntries(self, **kwargs):
         self.__readDb()
         result = self.__datas
-        for searchField in toSearch.keys():
-            if type(toSearch[searchField]) == str:
+        for field in kwargs.keys():
+            if isinstance(kwargs[field], tuple) and kwargs[field][1] is False:
+                if isinstance(kwargs[field][0], str):
+                    result = [item for item in result if
+                              kwargs[field][0] in item.get(field, "")]
+                elif isinstance(kwargs[field][0], (list, set)):
+                    result = [item for item in result if
+                              set(kwargs[field][0]).issubset(
+                                  item.get(field, []))]
+            elif callable(kwargs[field]):
                 result = [item for item in result if
-                          toSearch[searchField] in item.get(searchField, "")]
-            elif type(toSearch[searchField]) in [int, float, bool, list]:
+                          kwargs[field](item.get(field))]
+            else:
                 result = [item for item in result if
-                          toSearch[searchField] == item.get(searchField)]
-            elif type(toSearch[searchField]) == set:
-                result = [item for item in result if
-                          toSearch[searchField].issubset(
-                              item.get(searchField, []))]
-            elif callable(toSearch[searchField]):
-                result = [item for item in result if
-                          toSearch[searchField](item.get(searchField))]
-        if self.rMode in ['fileMem', 'mem']:
+                          kwargs[field] == item.get(field)]
+
+        if (self.rMode in ['hybrid', 'mem']) and (self.dCopy is True):
             return(deepcopy(result))
         else:
             return(result)
 
 
 class prettyPrinter:
-    def __init__(self, providedEntries, fields=None, header="full"):
-        self.genHeader = header
+    def __init__(self, providedEntries, **kwargs):
+        # No Style / csv / without border / separate header and border
+        # choose separator
+        # truncate
+        self.genHeader = kwargs.get('header', 'full')
         self.entries = deepcopy(providedEntries)
-        self.fields = self.generateFieldsAndHeader(deepcopy(fields))
+        self.sortField = kwargs.get('sort', None)
+        if self.sortField is not None:
+            self.entries = self.sort(self.entries, self.sortField)
+        self.fields = deepcopy(kwargs.get('fields', None))
+        self.fields = self.generateFieldsAndHeader(self.fields)
         self.entries = self.cleanup(self.entries, self.fields)
         self.generateColumns()
         self.lines = self.genLines()
@@ -177,6 +193,10 @@ class prettyPrinter:
         if self.genHeader in ['full', 'head']:
             self.entries.insert(0, header)
         return fields
+
+    def sort(self, entries, key):
+        newlist = sorted(entries, key=itemgetter(key))
+        return newlist
 
     def cleanup(self, entries, fields):
         for entry in entries:
