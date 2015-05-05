@@ -132,20 +132,35 @@ def testSqlite(lo):
 
 
 def testJson(lo):
-    # d = tddb.TinyDictDb(dbPath='/tmp/dbdbdb1.json', rMode='fileMem', wMode="append")
-    # for i in lo:
-        # d.addEntries(i)
-    # d = tddb.TinyDictDb(rMode='mem', wMode="mem")
-    # d.addEntries(lo)
     with open('/tmp/dbdbdb1.json', 'w') as f:
         json.dump(lo, f)
 
 
 def testTddb(lo):
-    d = tddb.TinyDictDb(dbPath='/tmp/dbdbdb2.json', rMode='fileMem', wMode="append")
+    d = tddb.TinyDictDb(path='/tmp/dbdbdb2.json', rMode='fileMem', wMode="append")
     for i in lo:
         d.addEntries(i)
-    # d.addEntries(lo)
+
+
+def rSqlite():
+    conn = sqlite3.connect('/tmp/dbdbdb.json')
+    c = conn.cursor()
+    c.execute('''SELECT * FROM entries''')
+    a = c.fetchall()
+    print(len(a))
+    conn.close()
+
+
+def rJson():
+    with open('/tmp/dbdbdb1.json') as f:
+        a = json.load(f)
+    print(len(a))
+
+
+def rTddb():
+    d = tddb.TinyDictDb(path='/tmp/dbdbdb2.json', rMode='fileMem', wMode="append")
+    a = d.findEntries()
+    print(len(a))
 
 
 def vs(num):
@@ -177,6 +192,26 @@ def vs(num):
         pass
     t1 = time.time()
     testTddb(loa)
+    t2 = time.time()
+    ttot = t2 - t1
+    print(ttot)
+
+    print("READ")
+
+    t1 = time.time()
+    rSqlite()
+    t2 = time.time()
+    ttot = t2 - t1
+    print(ttot)
+
+    t1 = time.time()
+    rJson()
+    t2 = time.time()
+    ttot = t2 - t1
+    print(ttot)
+
+    t1 = time.time()
+    rTddb()
     t2 = time.time()
     ttot = t2 - t1
     print(ttot)

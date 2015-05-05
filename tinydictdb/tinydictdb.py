@@ -48,10 +48,8 @@ class TinyDictDb:
             self.__readDb()
 
     def __str__(self):
-        return("TinyDictDb instance stored in {}, containing {} "
-               "entries in {} format.".format(self.path,
-                                              len(self.findEntries()),
-                                              self.encoding))
+        return("<TinyDictDb instance> containing {} "
+               "entries".format(len(self.findEntries())))
 
     def __readDb(self):
         if (self.rMode == 'file') or (self.__datas is None):
@@ -83,6 +81,9 @@ class TinyDictDb:
         if len(self.__datas) <= 1:
             classicWrite = True
         for entry in entries:
+            if not isinstance(entry, dict):
+                raise TypeError("TinyDictDB is meant to deal only"
+                                " with dictionaries")
             self.__datas.append(entry)
         if (self.wMode != 'append') or classicWrite is True:
             self.__writeDb()
