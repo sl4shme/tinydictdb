@@ -7,6 +7,9 @@ try:
 except ImportError:
     pass
 
+# insert at position (will remove the append possibility)
+# sort db using key / inver
+
 
 class TinyDictDb:
     def __init__(self, **kwargs):
@@ -130,6 +133,12 @@ class TinyDictDb:
     def count(self, entry):
         self.__readDb()
         return self.__datas.count(entry)
+
+    def sort(self, field, reverse=False):
+        if field is not None:
+            self.__datas.sort(key=itemgetter(field))
+        if reverse is True:
+            self.__datas.reverse()
 
     def findEntries(self, **kwargs):
         self.__readDb()
