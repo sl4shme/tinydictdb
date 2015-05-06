@@ -7,8 +7,9 @@ try:
 except ImportError:
     pass
 
-# insert at position (will remove the append possibility)
-# sort db using key / inver
+# For Pretty priter cleanup :
+# add [(select_fct(entry) cleanup_fct(entry))]
+# if select_fct(entry) is true then entry = cleanup_fct(entry),
 
 
 class TinyDictDb:
@@ -76,18 +77,28 @@ class TinyDictDb:
             raise ValueError("You need to set the path attribute of this DB"
                              " before writing it.")
 
-    def addEntries(self, entries):
-        if type(entries) == dict:
+    def addEntries(self, entries, index=None):
+        if isinstance(entries, dict):
             entries = [entries]
+        else:
+            if set([type(i) for i in entries]) != {dict}:
+                raise TypeError("The addEntries method only accepts a"
+                                " dictionary or a list of dictionaries")
         self.__readDb()
         classicWrite = False
         if len(self.__datas) <= 1:
             classicWrite = True
-        for entry in entries:
-            if not isinstance(entry, dict):
-                raise TypeError("TinyDictDB is meant to deal only"
-                                " with dictionaries")
-            self.__datas.append(entry)
+
+        if index is not None:
+            if isinstance(index, int):
+                self.__datas[index:index] = entries
+                classicWrite = True
+            else:
+                raise TypeError("index : expected int"
+                                ", got {}".format(type(index)))
+        else:
+            self.__datas.extend(entries)
+
         if (self.wMode != 'append') or classicWrite is True:
             self.__writeDb()
         else:
@@ -110,7 +121,7 @@ class TinyDictDb:
                 f.write(bytes(t, 'UTF-8'))
 
     def deleteEntries(self, entries):
-        if type(entries) == dict:
+        if isinstance(entries, dict):
             entries = [entries]
         self.__readDb()
         count = 0
@@ -135,10 +146,20 @@ class TinyDictDb:
         return self.__datas.count(entry)
 
     def sort(self, field, reverse=False):
+        self.__readDb()
         if field is not None:
-            self.__datas.sort(key=itemgetter(field))
+            try:
+                self.__datas.sort(key=itemgetter(field))
+            except KeyError:
+                raise KeyError("Can't sort using the key {} because at least"
+                               " one entry is missing it.".format(field))
+            except TypeError:
+                raise TypeError("Can't sort using the key {} because the type"
+                                " of the value corresponding in not"
+                                " consitent.".format(field))
         if reverse is True:
             self.__datas.reverse()
+        self.__writeDb()
 
     def findEntries(self, **kwargs):
         self.__readDb()
@@ -193,12 +214,12 @@ class PrettyPrinter:
             for field in fields:
                 header[field] = field
         else:
-            if type(fields) != list:
+            if not isinstance(fields, list):
                 raise TypeError("Expected a list of: str or tuples of str")
             for i, field in enumerate(fields):
-                if type(field) == str:
+                if isinstance(field, str):
                     header[field] = field
-                elif type(field) == tuple:
+                elif isinstance(field, tuple):
                     header[field[0]] = field[1]
                     fields[i] = field[0]
                 else:
