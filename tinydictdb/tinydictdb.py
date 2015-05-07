@@ -142,13 +142,18 @@ class TinyDictDb:
         self.__readDb()
         return self.__datas.count(entry)
 
-    def sort(self, field, reverse=False):
+    def sort(self, field, reverse=False, strict=True):
         self.__readDb()
         if field is not None:
             try:
                 self.__datas = sorted(self.__datas, key=lambda k: k[field])
             except (KeyError, TypeError):
-                self.__datas.sort(key=lambda k: str(k.get(field, "")))
+                if strict is True:
+                    raise TypeError("Either at least one entry doesn't contain"
+                                    " the sorting field either the type of the"
+                                    " corresponding value is inconsistent.")
+                else:
+                    self.__datas.sort(key=lambda k: str(k.get(field, "")))
         if reverse is True:
             self.__datas.reverse()
         self.__writeDb()
