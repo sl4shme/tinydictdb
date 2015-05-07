@@ -1,7 +1,6 @@
 from json import load, dump, dumps
 from os import path, SEEK_END
 from copy import deepcopy
-from operator import itemgetter
 try:
     from yaml import safe_load as yamlLoad, dump as yamlDump
 except ImportError:
@@ -147,14 +146,9 @@ class TinyDictDb:
         self.__readDb()
         if field is not None:
             try:
-                self.__datas.sort(key=itemgetter(field))
-            except KeyError:
-                raise KeyError("Can't sort using the key {} because at least"
-                               " one entry is missing it.".format(field))
-            except TypeError:
-                raise TypeError("Can't sort using the key {} because the type"
-                                " of the value corresponding in not"
-                                " consitent.".format(field))
+                self.__datas = sorted(self.__datas, key=lambda k: k[field])
+            except (KeyError, TypeError):
+                self.__datas.sort(key=lambda k: str(k.get(field, "")))
         if reverse is True:
             self.__datas.reverse()
         self.__writeDb()
@@ -188,25 +182,37 @@ class PrettyPrinter:
     def __init__(self, providedEntries, **kwargs):
         self.border = kwargs.get('border', True)
         self.header = kwargs.get('header', True)
-        self.vDelim = kwargs.get('delim', '|')
+        self.vDelim = kwargs.get('vDelim', '|')
         self.hDelim = kwargs.get('hDelim', '-')
         self.xDelim = kwargs.get('xDelim', '+')
         self.padding = kwargs.get('padding', True)
         self.truncate = kwargs.get('truncate')
-        self.entries = deepcopy(providedEntries)
-        self.sortField = kwargs.get('sort')
-        if self.sortField is not None:
-            self.entries.sort(key=itemgetter(self.sortField))
-        self.fields = deepcopy(kwargs.get('fields'))
-        self.fields = self.generateFieldsAndHeader(self.fields)
-        self.cleanup(kwargs.get('cleanupFct'))
-        self.generateColumns()
-        self.lines = self.genLines()
+        self.sort = kwargs.get('sort')
+        self.reverse = kwargs.get('reverse', False)
+        self.cleanupFct = kwargs.get('cleanupFct')
+        self.fields = kwargs.get('fields')
+        self.entries = providedEntries
+        self.generate()
 
-    def generateFieldsAndHeader(self, fields):
+    def generate(self):
+        self.__entries = deepcopy(self.entries)
+        if self.sort is not None:
+            try:
+                self.__entries = sorted(self.__entries,
+                                        key=lambda k: k[self.sort])
+            except (KeyError, TypeError):
+                self.__entries.sort(key=lambda k: str(k.get(self.sort, "")))
+        if self.reverse is True:
+            self.__entries.reverse()
+        self.__fields = self.__generateFieldsAndHeader(deepcopy(self.fields))
+        self.__cleanup()
+        self.__generateColumns()
+        self.lines = self.__genLines()
+
+    def __generateFieldsAndHeader(self, fields):
         header = {}
         if fields is None:
-            fields = list(set([i for sublist in self.entries
+            fields = list(set([i for sublist in self.__entries
                                for i in sublist.keys()]))
             fields.sort()
             for field in fields:
@@ -223,15 +229,15 @@ class PrettyPrinter:
                 else:
                     raise TypeError("Expected a list of: str or tuples of str")
         if self.header is True:
-            self.entries.insert(0, header)
+            self.__entries.insert(0, header)
         return fields
 
-    def cleanup(self, fct=None):
-        for entry in self.entries:
-            for field in self.fields:
+    def __cleanup(self):
+        for entry in self.__entries:
+            for field in self.__fields:
                 entry[field] = entry.get(field)
-                if fct is not None and callable(fct):
-                    entry[field] = fct(entry[field])
+                if callable(self.cleanupFct):
+                    entry[field] = self.cleanupFct(entry[field])
                 entry[field] = str(entry[field])
                 if isinstance(self.truncate, int) and self.truncate > 0:
                     entry[field] = entry[field][:self.truncate]
@@ -240,37 +246,36 @@ class PrettyPrinter:
                     if limit is not None:
                         entry[field] = entry[field][:limit]
 
-    def generateColumns(self):
-        self.columns = []
-        for field in self.fields:
-            lenght = [len(i[field])for i in self.entries]
+    def __generateColumns(self):
+        self.__columns = []
+        for field in self.__fields:
+            lenght = [len(i[field])for i in self.__entries]
             lenght.sort()
-            lenght.reverse()
-            self.columns.append((field, lenght[0]))
+            self.__columns.append((field, lenght.pop()))
 
-    def genLines(self):
+    def __genLines(self):
         lines = []
         if self.padding is False:
-            for e in self.entries:
+            for e in self.__entries:
                 line = ""
-                for (field, s) in self.columns:
+                for (field, s) in self.__columns:
                     line += e[field] + self.vDelim
                 lines.append(line[:-1])
             return lines
         if self.border is True:
             delimLine = self.xDelim + self.hDelim
-            for (field, size) in self.columns:
+            for (field, size) in self.__columns:
                 for i in range(0, size):
                     delimLine += self.hDelim
                 delimLine += self.hDelim + self.xDelim + self.hDelim
             delimLine = delimLine[:-1]
             lines.append(delimLine)
-        for lineNumber, entry in enumerate(self.entries):
+        for lineNumber, entry in enumerate(self.__entries):
             if self.border is True:
                 line = self.vDelim + " "
             else:
                 line = ""
-            for (field, size) in self.columns:
+            for (field, size) in self.__columns:
                 line += entry[field]
                 for i in range(0, (size - len(entry[field]))):
                     line += " "
@@ -283,7 +288,7 @@ class PrettyPrinter:
                 lines.append(delimLine)
         if self.border is True:
             lines.append(delimLine)
-        if self.fields == []:
+        if self.__fields == []:
             lines = []
         return lines
 
