@@ -7,10 +7,6 @@ try:
 except ImportError:
     pass
 
-# For Pretty priter cleanup :
-# add [(select_fct(entry) cleanup_fct(entry))]
-# if select_fct(entry) is true then entry = cleanup_fct(entry),
-
 
 class TinyDictDb:
     def __init__(self, **kwargs):
@@ -35,7 +31,7 @@ class TinyDictDb:
             self.wMode = kwargs.get('wMode', 'mem')
             if self.rMode != 'mem' or self.wMode != 'mem':
                 raise ValueError("Path is needed if rMode or wMode"
-                                 "differ from 'mem'.")
+                                 " differ from 'mem'.")
         else:
             self.rMode = kwargs.get('rMode', 'file')
             self.wMode = kwargs.get('wMode', 'file')
@@ -110,21 +106,23 @@ class TinyDictDb:
                 self.__dump(entries, f)
         else:
             t = dumps(entries)
-            t = t[1:]
+            t = ", " + t[1:]
             with open(self.path, 'rb+') as f:
                 f.seek(-1, SEEK_END)
                 f.truncate()
-                f.seek(-1, SEEK_END)
-                lastChar = f.read()
-                if lastChar != b"[":
-                    t = ", " + t
-                f.write(bytes(t, 'UTF-8'))
+                f.write(t.encode('UTF-8'))
 
-    def deleteEntries(self, entries):
+    def deleteEntries(self, entries, index=None):
         if isinstance(entries, dict):
             entries = [entries]
         self.__readDb()
         count = 0
+        if entries == [] and isinstance(index, int):
+            try:
+                self.__datas.pop(index)
+                count = 1
+            except IndexError:
+                pass
         for entry in entries:
             try:
                 self.__datas.remove(entry)
@@ -196,12 +194,12 @@ class PrettyPrinter:
         self.padding = kwargs.get('padding', True)
         self.truncate = kwargs.get('truncate')
         self.entries = deepcopy(providedEntries)
-        self.sortField = kwargs.get('sort', None)
+        self.sortField = kwargs.get('sort')
         if self.sortField is not None:
-            self.entries = self.sort(self.entries, self.sortField)
-        self.fields = deepcopy(kwargs.get('fields', None))
+            self.entries.sort(key=itemgetter(self.sortField))
+        self.fields = deepcopy(kwargs.get('fields'))
         self.fields = self.generateFieldsAndHeader(self.fields)
-        self.entries = self.cleanup(self.entries, self.fields, self.truncate)
+        self.cleanup(kwargs.get('cleanupFct'))
         self.generateColumns()
         self.lines = self.genLines()
 
@@ -228,21 +226,19 @@ class PrettyPrinter:
             self.entries.insert(0, header)
         return fields
 
-    def sort(self, entries, key):
-        newlist = sorted(entries, key=itemgetter(key))
-        return newlist
-
-    def cleanup(self, entries, fields, truncate):
-        for entry in entries:
-            for field in fields:
-                entry[field] = str(entry.get(field, None))
-                if isinstance(truncate, int) and truncate > 0:
-                    entry[field] = entry[field][:truncate]
-                elif isinstance(truncate, dict):
-                    limit = truncate.get(field)
+    def cleanup(self, fct=None):
+        for entry in self.entries:
+            for field in self.fields:
+                entry[field] = entry.get(field)
+                if fct is not None and callable(fct):
+                    entry[field] = fct(entry[field])
+                entry[field] = str(entry[field])
+                if isinstance(self.truncate, int) and self.truncate > 0:
+                    entry[field] = entry[field][:self.truncate]
+                elif isinstance(self.truncate, dict):
+                    limit = self.truncate.get(field)
                     if limit is not None:
                         entry[field] = entry[field][:limit]
-        return entries
 
     def generateColumns(self):
         self.columns = []

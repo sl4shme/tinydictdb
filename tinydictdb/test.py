@@ -29,7 +29,7 @@ def randStr(length):
 
 def createTypes():
     types = []
-    for r in ['mem', 'fileMem', 'file']:
+    for r in ['mem', 'hybrid', 'file']:
         for w in ['mem', 'append', 'file']:
             for e in ['json', 'yaml']:
                 for d in [True, False]:
@@ -43,7 +43,7 @@ def doTest(i, rm, wm, enc, d, en):
 
     print("creating")
     t1 = time.time()
-    o = tddb.TinyDictDb(dbPath=path, rMode=rm, wMode=wm, encoding=enc, dCopy=d)
+    o = tddb.TinyDictDb(path=path, rMode=rm, wMode=wm, encoding=enc, dCopy=d)
     t2 = time.time()
     ttot = t2 - t1
     entry['creation'] = ttot
@@ -79,8 +79,8 @@ def doTest(i, rm, wm, enc, d, en):
     ttot = t2 - t1
     entry['getAa'] = ttot
 
-    hundred1 = o.findEntries(id=(lambda x: True if 100 < x < 200 else False))
-    hundred2 = o.findEntries(id=(lambda x: True if 300 < x < 400 else False))
+    hundred1 = o.findEntries(id=(lambda x: True if 20 < x < 30 else False))
+    hundred2 = o.findEntries(id=(lambda x: True if 50 < x < 60 else False))
 
     print("rA")
     t1 = time.time()
