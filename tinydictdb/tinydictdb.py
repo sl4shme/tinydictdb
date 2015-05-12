@@ -131,11 +131,15 @@ class TinyDictDb:
         self.__writeDb()
         return count
 
-    def editEntries(self, entries, fct):
+    def editEntries(self, fct, entries=None):
         self.__readDb()
-        for entry in entries:
-            self.__datas.remove(entry)
-            self.__datas.append(fct(entry))
+        if entries is None:
+            for entry in self.__datas:
+                entry = fct(entry)
+        else:
+            for entry in entries:
+                index = self.__datas.index(entry)
+                self.__datas[index] = fct(self.__datas[index])
         self.__writeDb()
 
     def count(self, entry):
