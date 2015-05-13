@@ -42,6 +42,35 @@ It also comes with a fully configurable `PrettyPrinter`_. in order to display th
     +------+-------+--------------+
 
 
+Table of Content
+----------------
+
+- `TinyDictDb`_
+
+ - `Installation`_
+ - Usage
+ - Methods
+
+  - `Create or open a database (a JSON/YAML file):`_
+  - `Add entry/entries:`_
+  - `Retrieve/find entry / entries:`_
+  - `Delete entry / entries:`_
+  - `Count the number of occurences of an entry in the db:`_
+  - `Edit entries:`_
+  - `Sort database:`_
+  - `Get informations about the db:`_
+
+ - `Itialization parameters:`_
+
+  - rMode
+  - wMode
+  - encoding
+  - path
+  - dCopy
+
+- `PrettyPrinter`_
+
+
 Installation
 ------------
 
@@ -290,6 +319,26 @@ You can use a full memory database (wMode='mem', rMode='mem') and choose to dump
 This class is meant to display the informations stored in TinyDictDb (or any
 list of dictionnaries for that matter).
 
+Table of Content
+----------------
+
+- `TinyDictDb`_
+- `PrettyPrinter`_
+
+ - Usage
+ - `Parameters:`_
+
+  - `header`_
+  - `border`_
+  - `vDelim, hDelim, xDelim`_
+  - `padding`_
+  - `fields`_
+  - `sort`_
+  - `reverse`_
+  - `truncate`_
+  - `cleanupFct`_
+
+ - `Methods and attributes:`_
 
 
 Usage
@@ -574,7 +623,7 @@ Will output
     +------+-------+---------+
 
 
-Methods and attributes
+Methods and attributes:
 ----------------------
 
 When it is instanciated, the PrettyPrinter class will generate the visual and store it in the form of a list of lines under the **lines** attribute.
