@@ -1,0 +1,11 @@
+README.rst
+setup.cfg
+setup.py
+tinydictdb/__init__.py
+tinydictdb/prettyprinter.py
+tinydictdb/tinydictdb.py
+tinydictdb.egg-info/PKG-INFO
+tinydictdb.egg-info/SOURCES.txt
+tinydictdb.egg-info/dependency_links.txt
+tinydictdb.egg-info/pbr.json
+tinydictdb.egg-info/top_level.txt
