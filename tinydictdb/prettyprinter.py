@@ -12,6 +12,7 @@ class PrettyPrinter:
         self.truncate = kwargs.get('truncate')
         self.sort = kwargs.get('sort')
         self.reverse = kwargs.get('reverse', False)
+        self.numbered = kwargs.get('numbered', False)
         self.cleanupFct = kwargs.get('cleanupFct')
         self.fields = kwargs.get('fields')
         self.entries = providedEntries
@@ -28,6 +29,10 @@ class PrettyPrinter:
         if self.reverse is True:
             self.__entries.reverse()
         self.__fields = self.__generateFieldsAndHeader(deepcopy(self.fields))
+        if self.numbered is True:
+            for i, entry in enumerate(self.__entries):
+                self.__entries[i]['prettyPrinterIndex'] = i
+            self.__fields = ['prettyPrinterIndex'] + self.__fields
         self.__cleanup()
         self.__generateColumns()
         self.lines = self.__genLines()
