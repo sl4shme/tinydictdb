@@ -11,6 +11,7 @@ class PrettyPrinter:
         self.padding = kwargs.get('padding', True)
         self.align = kwargs.get('align', 'left')
         self.truncate = kwargs.get('truncate')
+        self.multiline = kwargs.get('multiline', False)
         self.sort = kwargs.get('sort')
         self.reverse = kwargs.get('reverse', False)
         self.numbered = kwargs.get('numbered', False)
@@ -66,17 +67,32 @@ class PrettyPrinter:
         return fields
 
     def __cleanup(self):
-        for entry in self.__entries:
+        if isinstance(self.truncate, int) and self.truncate > 0:
+            trInt = self.truncate
+            truncate = {}
             for field in self.__fields:
-                entry[field] = entry.get(field)
+                truncate[field] = trInt
+        else:
+            truncate = self.truncate
+
+        for i, entry in enumerate(self.__entries):
+            hasInsert = False
+            for field in self.__fields:
+                entry[field] = entry.get(field, '')
                 if callable(self.cleanupFct):
                     entry[field] = self.cleanupFct(entry[field])
                 entry[field] = str(entry[field])
-                if isinstance(self.truncate, int) and self.truncate > 0:
-                    entry[field] = entry[field][:self.truncate]
-                elif isinstance(self.truncate, dict):
-                    limit = self.truncate.get(field)
+                if isinstance(truncate, dict):
+                    limit = truncate.get(field)
                     if limit is not None:
+                        if self.multiline is True and (self.header is True and
+                                                       i != 0):
+                            if len(entry[field]) > limit:
+                                if hasInsert is False:
+                                    self.__entries.insert((i + 1), {})
+                                    hasInsert = True
+                                self.__entries[(i + 1)][field] = (
+                                    entry[field][limit:])
                         entry[field] = entry[field][:limit]
 
     def __generateColumns(self):
