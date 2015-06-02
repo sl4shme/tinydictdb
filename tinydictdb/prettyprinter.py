@@ -31,7 +31,11 @@ class PrettyPrinter:
         self.__fields = self.__generateFieldsAndHeader(deepcopy(self.fields))
         if self.numbered is True:
             for i, entry in enumerate(self.__entries):
-                self.__entries[i]['prettyPrinterIndex'] = i
+                if self.header is False:
+                    lineNumber = i + 1
+                else:
+                    lineNumber = i
+                self.__entries[i]['prettyPrinterIndex'] = lineNumber
             self.__fields = ['prettyPrinterIndex'] + self.__fields
         self.__cleanup()
         self.__generateColumns()
