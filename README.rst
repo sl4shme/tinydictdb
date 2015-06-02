@@ -615,6 +615,47 @@ Will output
     | 4244 | foba | ['dd']     |
     +------+------+------------+
 
+    
+truncate
+~~~~~~~~
+
+Will manage how the content is aligned in the paddind
+Possible values are : left, right, center (default to left)
+
+.. code :: python
+
+    print(PrettyPrinter(datas, align='right'))
+
+Will output
+
+.. code::
+
+    +------+-------+--------------+
+    | id   |  name |         tags |
+    +------+-------+--------------+
+    | 4242 |   foo | ['aa', 'bb'] |
+    | 4243 |   bar | ['bb', 'cc'] |
+    | 4244 | fobar |       ['dd'] |
+    +------+-------+--------------+
+
+You can provide a dictionnary in order to align only specific columns:
+
+.. code :: python
+
+    print(PrettyPrinter(datas, truncate={"id": "right", "tags": "right"}))
+
+Will output
+
+.. code::
+
+    +------+-------+--------------+
+    |   id | name  |         tags |
+    +------+-------+--------------+
+    | 4242 | foo   | ['aa', 'bb'] |
+    | 4243 | bar   | ['bb', 'cc'] |
+    | 4244 | fobar |       ['dd'] |
+    +------+------ +--------------+
+
 
 cleanupFct
 ~~~~~~~~~~

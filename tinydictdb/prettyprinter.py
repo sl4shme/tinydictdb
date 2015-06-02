@@ -9,6 +9,7 @@ class PrettyPrinter:
         self.hDelim = kwargs.get('hDelim', '-')
         self.xDelim = kwargs.get('xDelim', '+')
         self.padding = kwargs.get('padding', True)
+        self.align = kwargs.get('align', 'left')
         self.truncate = kwargs.get('truncate')
         self.sort = kwargs.get('sort')
         self.reverse = kwargs.get('reverse', False)
@@ -108,10 +109,31 @@ class PrettyPrinter:
             else:
                 line = ""
             for (field, size) in self.__columns:
-                line += entry[field]
-                for i in range(0, (size - len(entry[field]))):
-                    line += " "
-                line += " " + self.vDelim + " "
+                if isinstance(self.align, str):
+                    align = self.align
+                elif isinstance(self.align, dict):
+                    align = self.align.get(field, 'left')
+                if align == 'left':
+                    line += entry[field]
+                    for i in range(0, (size - len(entry[field]))):
+                        line += " "
+                    line += " " + self.vDelim + " "
+                elif align == 'right':
+                    for i in range(0, (size - len(entry[field]))):
+                        line += " "
+                    line += entry[field]
+                    line += " " + self.vDelim + " "
+                elif align == 'center':
+                    spaces = (size - len(entry[field]))
+                    lSpaces = rSpaces = (spaces // 2)
+                    if spaces % 2 == 1:
+                        rSpaces += 1
+                    for i in range(0, lSpaces):
+                        line += " "
+                    line += entry[field]
+                    for i in range(0, rSpaces):
+                        line += " "
+                    line += " " + self.vDelim + " "
             if self.border is False:
                 line = line[:-3]
             lines.append(line.strip())
