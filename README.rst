@@ -531,6 +531,28 @@ Will output
     | 4242 | foo   | ['aa', 'bb'] |
     +------+-------+--------------+
 
+    
+sort
+~~~~
+
+Will number the lines outputed
+
+.. code :: python
+
+    print(PrettyPrinter(datas, numbered=True))
+
+Will output
+
+.. code::
+
+    +---+------+-------+--------------+
+    | 0 | id   | name  | tags         |
+    +---+------+-------+--------------+
+    | 1 | 4243 | bar   | ['bb', 'cc'] |
+    | 2 | 4244 | fobar | ['dd']       |
+    | 3 | 4242 | foo   | ['aa', 'bb'] |
+    +---+------+-------+--------------+
+
 
 reverse
 ~~~~~~~
