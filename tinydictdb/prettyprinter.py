@@ -174,7 +174,7 @@ class PrettyPrinter:
                     line += " " + self.vDelim + " "
             if self.border is False:
                 line = line[:-3]
-            lines.append(line.strip())
+            lines.append(line.rstrip())
             if (self.border is True and lineNumber == 0 and
                     self.header is True):
                 lines.append(delimLine)
