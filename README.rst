@@ -334,8 +334,11 @@ Table of Content
   - `padding`_
   - `fields`_
   - `sort`_
+  - `numbered`_
   - `reverse`_
   - `truncate`_
+  - `multiline`_
+  - `align`_
   - `cleanupFct`_
 
  - `Methods and attributes:`_
@@ -532,8 +535,8 @@ Will output
     +------+-------+--------------+
 
     
-sort
-~~~~
+numbered
+~~~~~~~~
 
 Will number the lines outputed
 
@@ -615,9 +618,52 @@ Will output
     | 4244 | foba | ['dd']     |
     +------+------+------------+
 
-    
-truncate
+The special keyword **"magic"** will try to make the best of use of the terminal width (or the value specified through the **"termSize"** attribute).
+
+.. code :: python
+
+    print(PrettyPrinter(datas, truncate="magic", termsize=30))
+
+Will output
+
+.. code::
+
+    +------+------+------------+
+    | id   | name | tags       |
+    +------+------+------------+
+    | 4242 | foo  | ['aa', 'bb |
+    | 4243 | bar  | ['bb', 'cc |
+    | 4244 | foba | ['dd']     |
+    +------+------+------------+
+
+
+multiline
 ~~~~~~~~
+
+Instead of cuting the text, truncate divide it in multiple lines.
+
+.. code :: python
+
+    print(PrettyPrinter(datas, truncate='magic', termsize=30, multiline=True))
+
+Will output
+
+.. code::
+
+    +-----+-----+----------+
+    | id  | nam | tags     |
+    +-----+-----+----------+
+    | 424 | foo | ['aa', ' |
+    | 2   |     | bb']     |
+    | 424 | bar | ['bb', ' |
+    | 3   |     | cc']     |
+    | 424 | fob | ['dd']   |
+    | 4   | ar  |          |
+    +-----+-----+----------+
+   
+
+align
+~~~~~
 
 Will manage how the content is aligned in the paddind
 Possible values are : left, right, center (default to left)
