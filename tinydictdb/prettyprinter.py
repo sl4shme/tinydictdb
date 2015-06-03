@@ -11,6 +11,7 @@ class PrettyPrinter:
         self.padding = kwargs.get('padding', True)
         self.align = kwargs.get('align', 'left')
         self.truncate = kwargs.get('truncate')
+        self.termSize = kwargs.get('termSize', getTerminalSize())
         self.multiline = kwargs.get('multiline', False)
         self.sort = kwargs.get('sort')
         self.reverse = kwargs.get('reverse', False)
@@ -40,8 +41,29 @@ class PrettyPrinter:
                 self.__entries[i]['prettyPrinterIndex'] = lineNumber
             self.__fields = ['prettyPrinterIndex'] + self.__fields
         self.__cleanup()
+        if self.truncate == 'magic':
+            self.truncate = self.__magic(self.termSize)
+            self.__cleanup()
         self.__generateColumns()
         self.lines = self.__genLines()
+
+    def __magic(self, size):
+        res = {}
+        for field in self.__fields:
+            l = [len(i[field]) for i in self.__entries]
+            avg = sum(l) / float(len(l))
+            res[field] = avg
+        avgTot = sum([res[i] for i in res.keys()])
+        size = size - ((len(self.__fields) * 3) + 1)
+        if self.border is False:
+            size += 4
+        for field in res.keys():
+            perc = (size * res[field])
+            perc = (perc / avgTot)
+            if perc < 1:
+                perc = 1
+            res[field] = int(perc)
+        return res
 
     def __generateFieldsAndHeader(self, fields):
         header = {}
@@ -171,3 +193,14 @@ class PrettyPrinter:
             ret += line
             ret += "\n"
         return ret
+
+
+def getTerminalSize():
+    from os import popen
+    res = popen('stty size', 'r').read().split()[1]
+    try:
+        res = int(res)
+        return res
+    except (ValueError, TypeError):
+        raise OSError("Coudn't get the width of your terminal, please provide"
+                      " it by hand")
