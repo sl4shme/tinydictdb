@@ -618,7 +618,7 @@ Will output
     | 4244 | foba | ['dd']     |
     +------+------+------------+
 
-The special keyword **"magic"** will try to make the best of use of the terminal width (or the value specified through the **"termSize"** attribute).
+The special keyword **"magic"** will try to make the best of use of the terminal width (or the value specified through the **"termsize"** attribute).
 
 .. code :: python
 

@@ -7,7 +7,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='tinydictdb',
-    version='1.3.1',
+    version='1.3.2',
     description='A tiny flat file (JSON/YAML) dictionnaries database.',
     long_description=long_description,
     url='https://github.com/sl4shme/tinydictdb',

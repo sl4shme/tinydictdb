@@ -11,7 +11,7 @@ class PrettyPrinter:
         self.padding = kwargs.get('padding', True)
         self.align = kwargs.get('align', 'left')
         self.truncate = kwargs.get('truncate')
-        self.termSize = kwargs.get('termSize', getTerminalSize())
+        self.termSize = kwargs.get('termsize', getTerminalSize())
         self.multiline = kwargs.get('multiline', False)
         self.sort = kwargs.get('sort')
         self.reverse = kwargs.get('reverse', False)
